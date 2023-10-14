@@ -1,0 +1,8 @@
+<Entity 
+  name="DEBUG_NAME:player3"
+  tags="player3_unit" >
+  
+  <Base file="data/entities/player3_base.xml" include_children="1" /> 
+
+</Entity>
+

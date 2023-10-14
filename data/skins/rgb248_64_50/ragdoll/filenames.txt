@@ -1,0 +1,8 @@
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/torso.png
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/right_thigh.png
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/right_arm.png
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/right_hand.png
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/left_thigh.png
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/left_arm.png
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/left_hand.png
+mods/CouchCoOp/data/skins/RGB248_64_50/ragdoll/head.png
