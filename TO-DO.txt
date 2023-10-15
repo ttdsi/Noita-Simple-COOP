@@ -1,23 +1,17 @@
 [FEATURES]
---display p2 mouse aiming icon
---Give pointer perk to p2 respawn
---PLACE P2's Mouse at aim vector to display where to throw flask
---On Polymorph , plaer might teleport to temple and trigger respawn duplicating the character
--- On respawn the ui all fucked up---------------------- Temp fix restart --- thats fucked too
---take money from player 1 when p2 spawns
---inventory mouse click p2
-
-
-----[PREVIOUS TODO BEFORE REMAKE]
+- Revive feature [10]
+- Teleport Distance Setting [5]
 - Transfer Money without picking up gold [7]
-- Quick Slot through M-Nee [3] --- Inventory functions now take character
+- Quick Slot through M-Nee [3]
 - Different Robes on Controller player [9]
-- UI Improvements [2] ------ crazy
-- Polymorph fix [1] --- Jsut disabled that
-- Perk Share works on unstackable perks (ex. Projectile Repulsion Field) [4] ----- ???
+- UI Improvements [2]
+- 
 
 
 
 
----[Legendary]
---create a COOP Gamemode on the main menu
+[BUG FIXES]
+- Save Controller Player [2]
+- Polymorph fix [1]
+- Allow the last player to continue without a Teammate [5]
+- Perk Share works on unstackable perks (ex. Projectile Repulsion Field) [4]

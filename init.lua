@@ -1,9 +1,7 @@
-
 dofile( "data/scripts/game_helpers.lua" )
 dofile_once("data/scripts/lib/utilities.lua")
 dofile_once( "data/scripts/perks/perk_list.lua")
 dofile_once( "data/scripts/perks/perk.lua")
-
 
 
 -- REPLACES VANILLA SCRIPTS WITH MULTIPLAYER FRIENDLY ONES
@@ -11,7 +9,7 @@ ModLuaFileAppend( "data/scripts/items/heart_fullhp.lua", "data/scripts/items/hea
 ModLuaFileAppend( "data/scripts/items/heart_fullhp_temple.lua", "data/scripts/items/heart_fullhp_temple_share.lua" )
 ModLuaFileAppend( "data/scripts/items/gold_pickup.lua", "data/scripts/items/gold_pickup_share.lua" )
 ModLuaFileAppend( "data/scripts/perks/perk_pickup.lua", "data/scripts/items/perk_share.lua" )
-ModLuaFileAppend( "data/scripts/biomes/temple_altar.lua", "data/scripts/RespawnFunc.lua" )
+
 
 
 if not async then
@@ -25,47 +23,104 @@ end
 if ModIsEnabled("mnee") then
 	ModLuaFileAppend("mods/mnee/bindings.lua", "mods/CouchCoOp/mnee.lua")
 	dofile_once("mods/mnee/lib.lua")
-else
-  while true do
-    GamePrint("Enable Mnee To Play")
-  end
 end
 
 ------------------------------------------------------------------------------------------------------------------------------
 -- VARIABLES
 ------------------------------------------------------------------------------------------------------------------------------
 
+hotbarArray = {}  -- ARRAY THAT REPRESENT THE HOTBAR -> (0 == No Item, 1 == Item)
+action_pressed = false
+location_prev_initalized = false
+p1_x_prev = 0.0
+p1_y_prev = 0.0
+p2_x_prev = 0.0
+p2_y_prev = 0.0
+robe_red = { name =  "ARGB248_64_50", folder = "RGB248_64_50", cape_color = 0xFF3240f8, cape_color_edge = 0xFF1927df,}
+robe_purple = { name =  "ARGB168_131_216", folder = "RGB168_131_216", cape_color = 0xFFd883a8, cape_color_edge = 0xFFbf6a8f,}
+robe_green = { name =  "ARGB53_247_132", folder = "RGB53_247_132", cape_color = 0xFF84f735, cape_color_edge = 0xFF6bde1c,}
+robe_lightblue = { name =  "ARGB50_164_162", folder = "RGB50_164_162", cape_color = 0xFFa2a432, cape_color_edge = 0xFF898b19,}
+robe_blue = { name =  "ARGB50_116_205", folder = "RGB50_116_205", cape_color = 0xFFcd7432, cape_color_edge = 0xFFb45b19,}
+robe_yellow = { name =  "ARGB244_246_90", folder = "RGB244_246_90", cape_color = 0xFF5af6f4, cape_color_edge = 0xFF41dddb,}
 
-local location_prev_initalized = false
-local p1_x_prev = 0.0
-local p1_y_prev = 0.0
-local p2_x_prev = 0.0
-local p2_y_prev = 0.0
-local robe_red = { name =  "ARGB248_64_50", folder = "RGB248_64_50", cape_color = 0xFF3240f8, cape_color_edge = 0xFF1927df,}
-local robe_purple = { name =  "ARGB168_131_216", folder = "RGB168_131_216", cape_color = 0xFFd883a8, cape_color_edge = 0xFFbf6a8f,}
-local robe_green = { name =  "ARGB53_247_132", folder = "RGB53_247_132", cape_color = 0xFF84f735, cape_color_edge = 0xFF6bde1c,}
-local robe_lightblue = { name =  "ARGB50_164_162", folder = "RGB50_164_162", cape_color = 0xFFa2a432, cape_color_edge = 0xFF898b19,}
-local robe_blue = { name =  "ARGB50_116_205", folder = "RGB50_116_205", cape_color = 0xFFcd7432, cape_color_edge = 0xFFb45b19,}
-local robe_yellow = { name =  "ARGB244_246_90", folder = "RGB244_246_90", cape_color = 0xFF5af6f4, cape_color_edge = 0xFF41dddb,}
+p1_color = ModSettingGet("CouchCoOp.p1_color")
+p2_color = ModSettingGet("CouchCoOp.p2_color")
 
-local p1_color = ModSettingGet("CouchCoOp.p1_color")
-local p2_color = ModSettingGet("CouchCoOp.p2_color")
+polymorphed_player = 0 -- 0 => none // 1 => P1 // 2 => P2
 
+gameHook = 0
+debug_mode = 1
 
 
 
 
 ------------------------------------------------------------------------------------------------------------------------------
--- Function: GET PLAYER ENTITY
+-- FUNCTIONS
+------------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------------
+-- Function: PRINT ARRAY
+
+function print_r(arr, indentLevel)
+  local str = ""
+  local indentStr = "#"
+
+  if(indentLevel == nil) then
+      print(print_r(arr, 0))
+      return
+  end
+
+  for i = 0, indentLevel do
+      indentStr = indentStr.."\t"
+  end
+
+  for index,value in pairs(arr) do
+      if type(value) == "table" then
+          str = str..indentStr..index..": \n"..print_r(value, (indentLevel + 1))
+      else 
+          str = str..indentStr..index..": "..value.."\n"
+      end
+  end
+  return str
+end
+
+------------------------------------------------------------------------------------------------------------------------------
+-- Function: GET PLAYER 1 ENTITY
 
 function get_player1_obj()
+
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- Check if Polymorphed (is_polymorphed -> bool, polymorphed_player -> int [id])
+
+  local is_polymorphed, polymorphed_player =   IsPlayerPolymorphed()
+
+  if(is_polymorphed == true) then
+    if EntityGetWithTag( "player2_unit" )[1] ~= nil and EntityGetWithTag( "player1_unit" )[1] == nil then
+
+      if debug_mode == 2 then
+      print("p1 change -> id:" .. EntityGetName(polymorphed_player) .. polymorphed_player)
+      end
+
+      polymorphed_player = 1
+      return polymorphed_player
+
+    end
+  else 
+
+    if polymorphed_player == 1 then
+      polymorphed_player = 0
+    end
+
     return EntityGetWithTag( "player1_unit" )[1]
+
+  end
 end
+
+------------------------------------------------------------------------------------------------------------------------------
+-- Function: GET PLAYER 2 ENTITY
+
 function get_player2_obj()
   return EntityGetWithTag( "player2_unit" )[1]
-end
-function get_player3_obj()
-  return EntityGetWithTag( "player3_unit" )[1]
 end
 
 ------------------------------------------------------------------------------------------------------------------------------
@@ -87,16 +142,16 @@ function IsPlayerPolymorphed() -- returns bool, entityId/nil
         return false, nil
       end
     end
-    GamePrint("Not polyed")
+    -- GamePrint("Not polyed")
   end
 end
 
 ------------------------------------------------------------------------------------------------------------------------------
 -- Function: GET ACTIVE SLOT (Thanks to Horscht on Noita Discord)
 
-function get_active_slot(player)
-  local ControlsComponent = EntityGetFirstComponent( player, "ControlsComponent" ) --IF nil then probably polymorphed
-  local active_item = ComponentGetValue2(ControlsComponent, "mActiveItem")
+function get_active_slot()
+
+  local active_item = ComponentGetValue2(player1_Inventory2Component, "mActiveItem")
   local ItemComponent = EntityGetComponentIncludingDisabled( active_item, "ItemComponent" )[1]
   local active_slot = ComponentGetValue2(ItemComponent, "inventory_slot")
 
@@ -112,16 +167,16 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 -- Function: SCROLL HOTBAR
 
-function scroll_inventory(player,amount)
-  local ControlsComponent = EntityGetFirstComponent( player, "ControlsComponent" ) --IF nil then probably polymorphed
+function scroll_inventory(amount)
+
   -- Disable the controls component so we can set the state ourself instead of it getting it from the input device
-  ComponentSetValue2(ControlsComponent, "enabled", false)
+  ComponentSetValue2(player1_ControlsComponent, "enabled", false)
 
   -- This allows us to simulate inventory scrolling
   -- Thanks to Lobzyr on the Noita discord for figuring this out
-  ComponentSetValue2(ControlsComponent, "mButtonDownChangeItemR", true)
-  ComponentSetValue2(ControlsComponent, "mButtonFrameChangeItemR", GameGetFrameNum() + 1)
-  ComponentSetValue2(ControlsComponent, "mButtonCountChangeItemR", amount)
+  ComponentSetValue2(player1_ControlsComponent, "mButtonDownChangeItemR", true)
+  ComponentSetValue2(player1_ControlsComponent, "mButtonFrameChangeItemR", GameGetFrameNum() + 1)
+  ComponentSetValue2(player1_ControlsComponent, "mButtonCountChangeItemR", amount)
 end
 
 ------------------------------------------------------------------------------------------------------------------------------
@@ -165,8 +220,8 @@ end
 ---return table inventory In the form: { [0] = nil, [1] = 307, } etc
 ---return number active_item
 
-function get_inventory_and_active_item(player)
-  local inventory = get_inventory(player)
+function get_inventory_and_active_item()
+  local inventory = get_inventory()
   inventory = EntityGetAllChildren(inventory) or {}
   local current_active_item = get_active_item()
   local inv_out = {}
@@ -188,7 +243,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 -- Function: GENERATE HOTBAR ARRAY (0 == No Item, 1 == Item)
 
-function get_inventory(player)
+function get_inventory()
+  local player = get_player1_obj()
   if player then
       for i, child in ipairs(EntityGetAllChildren(player) or {}) do
           if EntityGetName(child) == "inventory_quick" then
@@ -201,7 +257,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 -- Function: Get active item
 
-function get_active_item(player)
+function get_active_item()
+  local player = get_player1_obj()
   if player then
       local inventory2 = EntityGetFirstComponentIncludingDisabled(player, "Inventory2Component")
       local mActualActiveItem = ComponentGetValue2(inventory2, "mActualActiveItem")
@@ -212,7 +269,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 -- Function: GENERATE HOTBAR ARRAY (0 == No Item, 1 == Item)
 
-function quick_slot(player,desired_slot)
+function quick_slot(desired_slot)
   -- Generate Hotbar-Array (0,1) represents if there is an item or not
   local inventory_slots, active_item = get_inventory_and_active_item()
   local active_item_item_comp = EntityGetFirstComponentIncludingDisabled(active_item, "ItemComponent")
@@ -245,7 +302,7 @@ function quick_slot(player,desired_slot)
     n = n + 1
   end
 
-  scroll_inventory(player,change_amount)
+  scroll_inventory(change_amount)
 end
 
 ------------------------------------------------------------------------------------------------------------------------------
@@ -331,75 +388,68 @@ end
 
 
 ------------------------------------------------------------------------------------------------------------------------------
-----------PLAYER1 MEMORY
-local InventoryOpen = false
-function setControlsP1()
+-- Function: Set P1 Controls
 
-  local player3_obj = get_player3_obj() -- Player 2 ID (Controller)
-  local player3_ControlsComponent = EntityGetFirstComponent( player3_obj, "ControlsComponent" ) --IF nil then probably polymorphed
-  local player1_obj = get_player1_obj() -- Player 1 ID (PC)
+function setControlsP1(obj)
 
-  local player1_ControlsComponent = EntityGetFirstComponent( player1_obj, "ControlsComponent" ) --IF nil then probably polymorphed
-  local player1_InventoryComponent =  EntityGetFirstComponent( player1_obj, "Inventory2Component" ) --IF nil then probably dead
-  local player1_InventoryGuiComponent = EntityGetFirstComponent( player1_obj, "InventoryGuiComponent" )
-  local player1_PlatformShooterPlayerComponent =  EntityGetFirstComponent( player1_obj, "PlatformShooterPlayerComponent" )
-
-  if player1_ControlsComponent == nil then
-    EntityAddComponent( player1_obj, "ControlsComponent" )
-    return
-  end
-  if player1_InventoryComponent == nil then
-    EntityAddComponent( player1_obj, "Inventory2Component" )
-    return
-  end
-  if player1_InventoryGuiComponent == nil then
-   EntityAddComponent( player1_obj, "InventoryGuiComponent" )
-   GamePrint("noGUI")
-   return
-  end
-  if player1_PlatformShooterPlayerComponent == nil then
-    EntityAddComponent( player1_obj, "PlatformShooterPlayerComponent", "mForceFireOnNextUpdate")
-    return
-  end
+  local p1_location_x,p1_location_y = EntityGetTransform( get_player1_obj() )
 
 
   ------------------------------------------------------------------------------------------------------------------------------
-  -- PLAYER AIMING
+  -- Vars
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- Get Player Entity's (Save to variable)
 
-  local p2_location_x,p2_location_y,p2_Rotation,p2_Scale_x,p2_Scale_y= EntityGetTransform( player1_obj )
-  local Stick_vector_x, Stick_vector_y = InputGetJoystickAnalogStick(0,1)
+  local player2_obj = get_player2_obj() -- Player 2 ID (Controller)
+  local player1_obj = obj -- Player 1 ID (PC)
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- PLAYER COMPONENTS
+
+  local player2_ControlsComponent = get_control_components(player2_obj) --IF nil then probably polymorphed
+  local player1_ControlsComponent = get_control_components(player1_obj) --IF nil then probably polymorphed
 
 
-  if Stick_vector_x > 0 and p2_Scale_x < 0 then
-    EntitySetTransform (player1_obj,p2_location_x,p2_location_y,p2_Rotation,1)
-    GamePrint("setright")
-  end
-  if Stick_vector_x < 0 and p2_Scale_x > 0 then
-    EntitySetTransform (player1_obj,p2_location_x,p2_location_y,p2_Rotation,-1)
-    GamePrint("setleft")
-  end
-  if Stick_vector_x ~=0 or Stick_vector_y ~=0 then
-    RestVectorx = Stick_vector_x
-    RestVectory = Stick_vector_y
+  if player1_ControlsComponent == nil then
+    EntityAddComponent( player1_obj, "ControlsComponent" )
   end
 
-  local p1_location_x,p1_location_y = EntityGetTransform( player1_obj )
+  if EntityGetFirstComponent( obj, "PlatformShooterPlayerComponent" ) == nil then
+    EntityAddComponent( obj, "PlatformShooterPlayerComponent", "mForceFireOnNextUpdate")
+  else
+    player1_PlatformShooterPlayerComponent = EntityGetFirstComponent( obj, "PlatformShooterPlayerComponent" )
+  end
+  
 
-  local lmb_pressed = ComponentGetValue2( player3_ControlsComponent, "mButtonDownLeftClick" )
-  local rmb_pressed = ComponentGetValue2( player3_ControlsComponent, "mButtonDownRightClick" )
-  local mouse_x,mouse_y = ComponentGetValue2( player3_ControlsComponent, "mMousePosition" )
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- PLAYER COORDINATES
 
+  local p2_location_x,p2_location_y = EntityGetTransform( player2_obj )
 
-  local p1_aim_vector_x = mouse_x-p1_location_x --LUA Error when init due to P3 comp not existing when initializing new world
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- Click Information
+
+  local lmb_pressed = ComponentGetValue2( player2_ControlsComponent, "mButtonDownLeftClick" )
+  local rmb_pressed = ComponentGetValue2( player2_ControlsComponent, "mButtonDownRightClick" )
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- MOUSE LOCATION
+
+  local mouse_x,mouse_y = ComponentGetValue2( player2_ControlsComponent, "mMousePosition" )
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- Aim Vector
+
+  local p1_aim_vector_x = mouse_x-p1_location_x  --LUA Error when init due to P2 comp not existing when initializing new world
   local p1_aim_vector_y = mouse_y-p1_location_y
 
 
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- SET CONTROLS FOR PC PLAYER
+  ------------------------------------------------------------------------------------------------------------------------------
 
   -- CURSOR
   ComponentSetValue2( player1_ControlsComponent, "mMousePosition", mouse_x, mouse_y )
   ComponentSetValue2( player1_ControlsComponent, "mAimingVector", p1_aim_vector_x , p1_aim_vector_y )
 
-    -- LEFT MOUSE BUTTON
+  -- LEFT MOUSE BUTTON
   if lmb_pressed then
     ComponentSetValue2( player1_PlatformShooterPlayerComponent, "mForceFireOnNextUpdate", true )
     ComponentSetValue2( player1_ControlsComponent, "mButtonDownLeftClick", lmb_pressed )
@@ -421,26 +471,25 @@ function setControlsP1()
     ComponentSetValue2( player1_ControlsComponent, "mButtonDownThrow", false )
   end
 
-  ------------------------------------------------------------------------------------------------------
   if ModIsEnabled("mnee") then
 
-    -- LEFT 
-    if is_binding_down("Keyboard", "Left", false, false, false, true) then
+    -- LEFT MOUSE BUTTON KEYBIND
+    if is_binding_down("key_left", "left", false, false, false, true) then
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownLeft", true )
     else
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownLeft", false ) -- Lua arror: Assert failed item_pickup is not defined ? 
     end
 
-    -- RIGHT 
-    if is_binding_down("Keyboard", "Right", false, false, false, true) then
+    -- RIGHT MOUSE BUTTON KEYBIND
+    if is_binding_down("key_right", "right", false, false, false, true) then
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownRight", true )
     else
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownRight", false )
     end
 
     -- HOVER: SPACE / W KEYBIND
-    if is_binding_down("Keyboard", "Up", false, false, false, true)  then
-      ComponentSetValue2( player1_ControlsComponent, "mFlyingTargetY", p2_location_y-10 )
+    ComponentSetValue2( player1_ControlsComponent, "mFlyingTargetY", p1_location_y-10 )
+    if is_binding_down("key_jump_space", "jump_space", false, false, false, true) or is_binding_down("key_jump_w", "jump_w", false, false, false, true) then
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownUp", true )
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownJump", true )
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownFly", true )
@@ -452,7 +501,7 @@ function setControlsP1()
     end
 
     -- DOWN KEYBIND
-    if is_binding_down("Keyboard", "Down", false, false, false, true) then
+    if is_binding_down("key_down", "down", false, false, false, true) then
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownDown", true)
       ComponentSetValue2( player1_ControlsComponent, "mButtonDownEat", true)
     else
@@ -461,18 +510,20 @@ function setControlsP1()
     end
 
     -- NEXT ITEM KEYBIND
-    if get_binding_pressed("Keyboard", "NextItem") then
+    if get_binding_pressed("key_next_item_r", "next_item_r") then
       local amount = 1
       ComponentSetValue2(player1_ControlsComponent, "mButtonDownChangeItemR", true)
       ComponentSetValue2(player1_ControlsComponent, "mButtonFrameChangeItemR", GameGetFrameNum()+1)
       ComponentSetValue2(player1_ControlsComponent, "mButtonCountChangeItemR", amount)
+      active_slot = get_active_slot()
+
     else
       ComponentSetValue2(player1_ControlsComponent, "mButtonDownChangeItemR", false)
       ComponentSetValue2(player1_ControlsComponent, "mButtonCountChangeItemR", 0)
     end
 
     -- PREVIOUS ITEM KEYBIND
-    if get_binding_pressed("Keyboard", "PrevItem") then
+    if get_binding_pressed("key_next_item_l", "next_item_l") then
       local amount = 1
       ComponentSetValue2(player1_ControlsComponent, "mButtonDownChangeItemL", true)
       ComponentSetValue2(player1_ControlsComponent, "mButtonFrameChangeItemL", GameGetFrameNum()+1)
@@ -483,307 +534,39 @@ function setControlsP1()
     end
 
     -- F(KICK) KEYBIND
-    if get_binding_pressed("Keyboard", "Kick") then
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownRightClick", true)
-      ComponentSetValue2(player1_ControlsComponent, "mButtonFrameRightClick", GameGetFrameNum()+1)
+    if get_binding_pressed("key_kick", "kick") then
+      GamePrint("kick")
       ComponentSetValue2(player1_ControlsComponent, "mButtonDownKick", true);
       ComponentSetValue2(player1_ControlsComponent, "mButtonFrameKick", GameGetFrameNum()+1);
     else
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownRightClick", false)
       ComponentSetValue2(player1_ControlsComponent, "mButtonDownKick", false);
     end
-    ------------------------------INVENTORY
-    if get_binding_pressed("Keyboard", "Inventory") then
-      if InventoryOpen == false then
-        InventoryOpen = true
-      elseif InventoryOpen == true then
-        InventoryOpen = false
-      end
-      ComponentSetValue2(player1_InventoryGuiComponent, "mActive", InventoryOpen)
-      --ComponentSetValue2(player1_ControlsComponent, "mButtonFrameInventory", GameGetFrameNum()+1
-    end
-    ------------------------------ACTION
-    if get_binding_pressed("Keyboard", "Interact", false, false, false, true) then
-      GamePrint("Interact")  
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownAction", true)
-      ComponentSetValue2(player1_ControlsComponent, "mButtonFrameAction", GameGetFrameNum()+1)
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownInteract", true)
-      ComponentSetValue2(player1_ControlsComponent, "mButtonFrameInteract", GameGetFrameNum()+1)
-    else
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownAction", false)
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownInteract", false)
-    end
-
-    if is_binding_down("Keyboard", "Interact", false, false, false, true) then
-      GamePrint("Its Down")  
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownLeftClick", true)
-      ComponentSetValue2(player1_ControlsComponent, "mButtonFrameLeftClick", GameGetFrameNum()+1)
-    else
-      ComponentSetValue2(player1_ControlsComponent, "mButtonDownLeftClick", false)
-    end
-
-  end
-end
-
-
-----------PLAYER2 MEMORY
-local RestVectorx = 1
-local RestVectory = 1
-local InventoryOpen = false
-function setControlsP2()
-
-  local player3_obj = get_player3_obj() -- Player 2 ID (Controller)
-  local player3_ControlsComponent = EntityGetFirstComponent( player3_obj, "ControlsComponent" ) --IF nil then probably polymorphed
-  local player2_obj = get_player2_obj() -- Player 1 ID (PC)
-
-  local player2_ControlsComponent = EntityGetFirstComponent( player2_obj, "ControlsComponent" ) --IF nil then probably polymorphed
-  local player2_InventoryComponent =  EntityGetFirstComponent( player2_obj, "Inventory2Component" ) --IF nil then probably dead
-  local player2_InventoryGuiComponent = EntityGetFirstComponent( player2_obj, "InventoryGuiComponent" )
-  local player2_PlatformShooterPlayerComponent =  EntityGetFirstComponent( player2_obj, "PlatformShooterPlayerComponent" )
-
-  if player2_ControlsComponent == nil then
-    EntityAddComponent( player2_obj, "ControlsComponent" )
-    return
-  end
-  if player2_InventoryComponent == nil then
-    EntityAddComponent( player2_obj, "Inventory2Component" )
-    return
-  end
-  --if player2_InventoryGuiComponent == nil then
-  -- EntityAddComponent( player2_obj, "InventoryGuiComponent" )
-  -- GamePrint("noGUI")
-  -- return
-  --end
-  if player2_PlatformShooterPlayerComponent == nil then
-    EntityAddComponent( player2_obj, "PlatformShooterPlayerComponent", "mForceFireOnNextUpdate")
-    return
   end
 
-
-  ------------------------------------------------------------------------------------------------------------------------------
-  -- PLAYER AIMING
-
-  local p2_location_x,p2_location_y,p2_Rotation,p2_Scale_x,p2_Scale_y= EntityGetTransform( player2_obj )
-  local Stick_vector_x, Stick_vector_y = InputGetJoystickAnalogStick(0,1)
-
-
-  if Stick_vector_x > 0 and p2_Scale_x < 0 then
-    EntitySetTransform (player2_obj,p2_location_x,p2_location_y,p2_Rotation,1)
-    GamePrint("setright")
-  end
-  if Stick_vector_x < 0 and p2_Scale_x > 0 then
-    EntitySetTransform (player2_obj,p2_location_x,p2_location_y,p2_Rotation,-1)
-    GamePrint("setleft")
-  end
-  if Stick_vector_x ~=0 or Stick_vector_y ~=0 then
-    RestVectorx = Stick_vector_x
-    RestVectory = Stick_vector_y
-  end
-
-  local target_x = p2_location_x+(10*RestVectorx)
-  local target_y = p2_location_y+(10*RestVectory)
-
-  local dir_x = (target_x - p2_location_x)
-  local dir_y = (target_y - p2_location_y)
-
-  local len_sq = dir_x*dir_x + dir_y*dir_y
-
-  if len_sq ~= 0 then
-    local len = math.sqrt(len_sq)
-    local dir_x2 = dir_x / len
-
-    local dir_y2 = dir_y / len
-
-   ComponentSetValue2(player2_ControlsComponent, "mAimingVector", dir_x2, dir_y2)
-   local Debugx, Debugy = ComponentGetValue2(player2_ControlsComponent, "mAimingVector")
-   --DEBUG_MARK( target_x, target_y, "", 1,2,50)
-   --DEBUG_MARK( Debugx*30, Debugy*30, "", 35,27,80)
-  end
-  --------------------------P2 MOUSE CURSOR
-  local mouse_x,mouse_y = ComponentGetValue2( player3_ControlsComponent, "mMousePosition" )
-  ComponentSetValue2( player2_ControlsComponent, "mMousePosition",mouse_x, mouse_y)
-  local xx,yy = ComponentGetValue2( player2_ControlsComponent, "mMousePosition" )
-
-  ------------------------------------------------------------------------------------------------------
-  if ModIsEnabled("mnee") then
-  -- shoot
-  if is_binding_down("Gamepad", "Shoot", false, false, false, true) then
-    ComponentSetValue2( player2_PlatformShooterPlayerComponent, "mForceFireOnNextUpdate", true )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownLeftClick", true )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownFire", true )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownFire2", true )
-  else
-    ComponentSetValue2( player2_PlatformShooterPlayerComponent, "mForceFireOnNextUpdate", false )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownLeftClick", false )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownFire", false )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownFire2", false )
-  end
-
-  -- Throw
-  if is_binding_down("Gamepad", "Throw", false, false, false, true) then
-    ComponentSetValue2( player2_ControlsComponent, "mAimingVectorNormalized", dir_x , dir_y )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownThrow", true )
-    ComponentSetValue2( player2_ControlsComponent, "mButtonFrameThrow", GameGetFrameNum() + 1 )
-  else
-    ComponentSetValue2( player2_ControlsComponent, "mButtonDownThrow", false )
-  end
-
-    -- LEFT 
-    if is_binding_down("Gamepad", "Left", false, false, false, true) then
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownLeft", true )
-    else
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownLeft", false ) -- Lua arror: Assert failed item_pickup is not defined ? 
-    end
-
-    -- RIGHT 
-    if is_binding_down("Gamepad", "Right", false, false, false, true) then
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownRight", true )
-    else
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownRight", false )
-    end
-
-    -- HOVER: SPACE / W KEYBIND
-    if is_binding_down("Gamepad", "Up", false, false, false, true)  then
-      ComponentSetValue2( player2_ControlsComponent, "mFlyingTargetY", p2_location_y-10 )
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownUp", true )
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownJump", true )
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownFly", true )
-      ComponentSetValue2( player2_ControlsComponent, "mButtonFrameFly", GameGetFrameNum() )
-    else
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownUp", false )
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownJump", false )
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownFly", false )
-    end
-
-    -- DOWN KEYBIND
-    if is_binding_down("Gamepad", "Down", false, false, false, true) then
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownDown", true)
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownEat", true)
-    else
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownDown", false)
-      ComponentSetValue2( player2_ControlsComponent, "mButtonDownEat", false)
-    end
-
-    -- NEXT ITEM KEYBIND
-    if get_binding_pressed("Gamepad", "NextItem") then
-      local amount = 1
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownChangeItemR", true)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonFrameChangeItemR", GameGetFrameNum()+1)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonCountChangeItemR", amount)
-    else
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownChangeItemR", false)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonCountChangeItemR", 0)
-    end
-
-    -- PREVIOUS ITEM KEYBIND
-    if get_binding_pressed("Gamepad", "PrevItem") then
-      local amount = 1
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownChangeItemL", true)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonFrameChangeItemL", GameGetFrameNum()+1)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonCountChangeItemL", amount)
-    else
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownChangeItemL", false)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonCountChangeItemL", 0)
-    end
-
-    -- F(KICK) KEYBIND
-    if get_binding_pressed("Gamepad", "Kick") then
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownRightClick", true)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonFrameRightClick", GameGetFrameNum()+1)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownKick", true);
-      ComponentSetValue2(player2_ControlsComponent, "mButtonFrameKick", GameGetFrameNum()+1);
-    else
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownRightClick", false)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownKick", false);
-    end
-    ------------------------------INVENTORY
-    if get_binding_pressed("Gamepad", "Inventory") then
-      if InventoryOpen == false then
-        InventoryOpen = true
-      elseif InventoryOpen == true then
-        InventoryOpen = false
-      end
-      ComponentSetValue2(player2_InventoryGuiComponent, "mActive", InventoryOpen)
-      --ComponentSetValue2(player2_ControlsComponent, "mButtonFrameInventory", GameGetFrameNum()+1
-    end
-    ------------------------------ACTION
-    if get_binding_pressed("Gamepad", "Interact", false, false, false, true) then
-      GamePrint("Interact")  
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownAction", true)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonFrameAction", GameGetFrameNum()+1)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownInteract", true)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonFrameInteract", GameGetFrameNum()+1)
-    else
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownAction", false)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownInteract", false)
-    end
-
-    if is_binding_down("Gamepad", "Interact", false, false, false, true) then
-      GamePrint("Its Down")  
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownLeftClick", true)
-      ComponentSetValue2(player2_ControlsComponent, "mButtonFrameLeftClick", GameGetFrameNum()+1)
-    else
-      ComponentSetValue2(player2_ControlsComponent, "mButtonDownLeftClick", false)
-    end
-
-  end
-end
-
----------Universal Keybinds
-function UniversalControl()
-  local player3_obj = get_player3_obj() -- Player 2 ID (Controller)
-  local player3_ControlsComponent = EntityGetFirstComponent( player3_obj, "ControlsComponent" )
-  if player3_ControlsComponent == nil then
-    EntityAddComponent( player3_obj, "ControlsComponent")
-
-  end
-  if get_binding_pressed("key_cam0", "cam0") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "0")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "0", false)
-    EntityLoad( "data/entities/player.xml" , 345 + 110 , 140 - 35 )
-  end
-  if get_binding_pressed("key_cam1", "cam1") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "1")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "1", false)
-
-  end
-  if get_binding_pressed("key_cam2", "cam2") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "2")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "2", false)
-  end
-  if get_binding_pressed("key_cam3", "cam3") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "3")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "3", false)
-  end
-
+  print("player1_ControlsComponent: " .. player1_ControlsComponent)
+  print("player2_ControlsComponent: " .. player2_ControlsComponent)
 
 end
 
+------------------------------------------------------------------------------------------------------------------------------
+-- Function: Gets Control Components (Function Improves Error Handling!)
 
+function get_control_components(obj)
+  return EntityGetFirstComponent( obj, "ControlsComponent" ) --IF nil then probably polymorphed
+end
 
-function IsPlayerDead(PlayerTag)
+function get_inventory2_component(obj)
+  return EntityGetFirstComponent( obj, "Inventory2Component" ) --IF nil then probably polymorphed -> 0
+end
 
-	local Status = PlayerTag
-  if Status == nil then
-    return true
-  elseif Status ~= nil then
-    return false
-  end
-
+function get_platform_shooter_component(obj)
+  return EntityGetFirstComponent( obj, "PlatformShooterPlayerComponent" ) --IF nil then probably polymorphed
 end
 
 
-
-
-
-
-
-
-
-
-
-
-
+------------------------------------------------------------------------------------------------------------------------------
+-- END OF FUNCTIONS
+------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -817,107 +600,348 @@ else -- Assume we are on Normal
 end
 
 
+
+
+
+
+
+
+
+
+
+
+
+-- Called *every* time the game is about to start updating the world
 ------------------------------------------------------------------------------------------------------------------------------
 --//////////  ON FRAME UPDATE   /////////////////////////////////////////////////////////////////////////////////////////////--
 ------------------------------------------------------------------------------------------------------------------------------
-local Initalized = false
 function OnWorldPreUpdate()
 	wake_up_waiting_threads(1)
 
-  local player3_obj = get_player3_obj() -- Player 3 ID (PC)
+
+  -- Debug
+  if debug_mode == 1 then
+    gameHook = gameHook + 1
+    if(polymorphed_player ~= 0)then
+        print("polymorphed_player: " .. polymorphed_player)
+    end
+    if gameHook % 250 == 0 then
+      print("tick: " .. gameHook)
+    end
+  end
+
+
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- Get Player Entity's (Save to variable)
+
   local player2_obj = get_player2_obj() -- Player 2 ID (Controller)
   local player1_obj = get_player1_obj() -- Player 1 ID (PC)
 
-  local player3_PlatformShooterPlayerComponent = EntityGetFirstComponent( player1_obj, "PlatformShooterPlayerComponent" )
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- PLAYER COORDINATES
 
   local p2_location_x,p2_location_y = EntityGetTransform( player2_obj )
   local p1_location_x,p1_location_y = EntityGetTransform( player1_obj )
-  local Camx,Camy = GameGetCameraPos()
-  EntitySetTransform(player3_obj,Camx,Camy)
 
-  if p1_location_x == nil then
-    p1_location_x,p1_location_y = p1_x_prev,p1_location_y
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- GET Player Controls (Save Compononents to variable)
+
+  player2_ControlsComponent = get_control_components(player2_obj) --IF nil then probably polymorphed
+  player1_ControlsComponent = get_control_components(player1_obj) --IF nil then probably polymorphed
+
+  player1_Inventory2Component =  get_inventory2_component(player1_obj) --IF nil then probably dead
+  player1_PlatformShooterPlayerComponent = get_platform_shooter_component(player1_obj)
+
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- ??? Prints out GameInformation of Player 1 ???
+
+  local player1_GameEffectComponent = EntityGetComponent( player1_obj, "GameEffectComponent" )
+  if player1_GameEffectComponent then
+    GamePrint(tostring(type(player1_GameEffectComponent)))
   end
-  if p2_location_x == nil then
-    p2_location_x,p2_location_y = p2_x_prev,p2_location_y
-  end
 
-
-
-  local telport_distance = ModSettingGet("CouchCoOp.telport_distance")
-
-
-
-
-
-
-  local camera_mode = ModSettingGet("CouchCoOp.camera_mode")
-
-
-  UniversalControl()
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- CAMERA
   
-  if IsPlayerDead(get_player1_obj()) == false then
-    setControlsP1()
-    p1_x_prev = p1_location_x
-    p1_y_prev = p1_location_y
+  -- Camera Reactive to Middle of Player x-Pos and Middle of y-Pos P1: cam -> ComponentSetValue2(player1_PlatformShooterPlayerComponent, "mDesiredCameraPos", p1_location_x, p1_location_y ) 
+  if get_binding_pressed("key_cam0", "cam0") and ModIsEnabled("mnee") then
+    ModSettingSet("CouchCoOp.camera_mode", "0")
+    ModSettingSetNextValue("CouchCoOp.camera_mode", "0", false)
   end
-
-  if IsPlayerDead( setControlsP2()) == false then
-    setControlsP2()
-    p2_x_prev = p2_location_x
-    p2_y_prev = p2_location_y
+  if get_binding_pressed("key_cam1", "cam1") and ModIsEnabled("mnee") then
+    ModSettingSet("CouchCoOp.camera_mode", "1")
+    ModSettingSetNextValue("CouchCoOp.camera_mode", "1", false)
+  end
+  if get_binding_pressed("key_cam2", "cam2") and ModIsEnabled("mnee") then
+    ModSettingSet("CouchCoOp.camera_mode", "2")
+    ModSettingSetNextValue("CouchCoOp.camera_mode", "2", false)
+  end
+  if get_binding_pressed("key_cam3", "cam3") and ModIsEnabled("mnee") then
+    ModSettingSet("CouchCoOp.camera_mode", "3")
+    ModSettingSetNextValue("CouchCoOp.camera_mode", "3", false)
+  end
   
-  end
-
-  if IsPlayerDead(get_player1_obj()) == false and IsPlayerDead(get_player2_obj()) == true then
-    camera_mode = "1"
-    ComponentSetValue2(player3_PlatformShooterPlayerComponent, "mDesiredCameraPos", p1_location_x, p1_location_y ) 
-  elseif IsPlayerDead(get_player1_obj()) == true and IsPlayerDead(get_player2_obj()) == false then
-    camera_mode = "2"
-  elseif IsPlayerDead(get_player1_obj()) == false and IsPlayerDead(get_player2_obj()) == false then
-    camera_mode = "0"
-  elseif IsPlayerDead(get_player1_obj()) == true and IsPlayerDead(get_player2_obj()) == true and Initalized == true then
-    camera_mode = "4"
-    GameTriggerGameOver()
-  end
-
-
+  camera_mode = ModSettingGet("CouchCoOp.camera_mode")
+  
 
   if (camera_mode == "0") then
-    GameSetCameraPos(( p1_location_x+p2_location_x)/2.0, (p1_location_y+p2_location_y)/2.0 )
-    ComponentSetValue2(player3_PlatformShooterPlayerComponent, "mDesiredCameraPos", ( p1_location_x+p2_location_x)/2.0, (p1_location_y+p2_location_y)/2.0 )
+    ComponentSetValue2(player1_PlatformShooterPlayerComponent, "mDesiredCameraPos", ( p1_location_x+p2_location_x)/2.0, (p1_location_y+p2_location_y)/2.0 )
   elseif (camera_mode == "1") then
-    GameSetCameraPos(p1_location_x, p1_location_y )
+    ComponentSetValue2(player1_PlatformShooterPlayerComponent, "mDesiredCameraPos", p1_location_x, p1_location_y ) 
   elseif (camera_mode == "2") then
-
-    GameSetCameraPos(p2_location_x, p2_location_y )
+    ComponentSetValue2(player1_PlatformShooterPlayerComponent, "mDesiredCameraPos", p2_location_x, p2_location_y )
   else
-    GameSetCameraPos(0, 0)
+    -- No Camera Fix
   end
 
---GamePrint(camera_mode)
+  ------------------------------------------------------------------------------------------------------------------------------
 
-end
+  ------------------------------------------------------------------------------------------------------------------------------
+  -- SET CONTROLS FOR PC PLAYER
+  ------------------------------------------------------------------------------------------------------------------------------
+  setControlsP1(player1_obj)
+
+
+  ------------------------------------------------------------------------------------------------------------------------------  
+  -- M-NEE KEYBINDS
+  ------------------------------------------------------------------------------------------------------------------------------
+
+  if ModIsEnabled("mnee") then
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- GUI Inventory
+
+    local player1_InventoryGuiComponent = EntityGetComponent( player1_obj, "InventoryGuiComponent" )
+    local player2_InventoryGuiComponent = EntityGetComponent( player2_obj, "InventoryGuiComponent" )
+
+    if (not player1_InventoryGuiComponent) and (not player2_InventoryGuiComponent) then
+      EntityAddComponent( player1_obj, "InventoryGuiComponent" )
+      EntityAddComponent( player2_obj, "InventoryGuiComponent" )
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- P1 Inventory
+
+    -- Hide Inventory2 if Inventory1 is open
+    if player1_InventoryGuiComponent then
+      if ComponentGetValue2(player1_InventoryGuiComponent[1], "mActive") then
+        if player2_InventoryGuiComponent then
+          EntityRemoveComponent( player2_obj, player2_InventoryGuiComponent[1] )
+        end
+      end
+    end
+
+    if player2_InventoryGuiComponent then
+      if ComponentGetValue2(player2_InventoryGuiComponent[1], "mActive") then
+        if player1_InventoryGuiComponent then
+          EntityRemoveComponent( player1_obj, player1_InventoryGuiComponent[1] )
+        end
+      end
+    end
+    
+ 
+
+    -- P1 Interact Keybind
+    if is_binding_down("key_interact", "interact", false, false, false, true) then
+      EntityRemoveComponent( player2_obj, player2_InventoryGuiComponent[1] ) -- Lua error (Deletes player2 spell inv so p1 can pick up spells)
+      ComponentSetValue2(player1_ControlsComponent, "mButtonDownInteract", true)
+      ComponentSetValue2(player1_ControlsComponent, "mButtonFrameInteract", GameGetFrameNum()+1)
+    else
+      if (not player2_InventoryGuiComponent) and (not ComponentGetValue2(player1_InventoryGuiComponent[1], "mActive")) then
+        EntityAddComponent( player2_obj, "InventoryGuiComponent" )
+      end
+      ComponentSetValue2(player1_ControlsComponent, "mButtonDownInteract", false); 
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- P2 Inventory
+
+    -- Hide Inventory1 if Inventory2 is open
+    if ComponentGetValue2(player2_ControlsComponent, "mButtonDownInteract") then
+      EntityRemoveComponent( player1_obj, player1_InventoryGuiComponent[1] ) -- Lua error ?
+      if not action_pressed then
+        ComponentSetValue2( player2_ControlsComponent , "mButtonDownInteract" , true )
+        ComponentSetValue2( player2_ControlsComponent , "mButtonFrameInteract" , GameGetFrameNum()+1 )
+      end
+      action_pressed = true
+    else
+      if (not player1_InventoryGuiComponent) and (not ComponentGetValue2(player2_InventoryGuiComponent[1], "mActive")) then
+        EntityAddComponent( player1_obj, "InventoryGuiComponent" )
+      end
+      action_pressed = false
+    end
+
+
+    -- P2 Keybind Inventory
+    if player1_Inventory2Component == nil or player1_Inventory2Component == 0 then
+      if debug_mode == 2 then
+        print("no p1 inv" .. gameHook)
+      end
+    else
+      if get_binding_pressed("key_inventory", "inventory") then
+        ComponentSetValue2(player1_ControlsComponent, "mButtonDownInventory", true);
+        ComponentSetValue2(player1_ControlsComponent, "mButtonFrameInventory", GameGetFrameNum()+1);
+        ComponentSetValue2(player1_Inventory2Component, "mForceRefresh", true);
+      else
+        ComponentSetValue2(player1_ControlsComponent, "mButtonDownInventory", false);
+        ComponentSetValue2(player1_Inventory2Component, "mForceRefresh", false);
+      end
+    end
+  
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- Keybind Take Control
+
+    if get_binding_pressed("key_take_control", "take_control") then
+      GamePrint("take contol")
+      ComponentSetValue2( player1_ControlsComponent, "enabled", false)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- Keybind Give Control
+
+    if get_binding_pressed("key_give_control", "give_control") then
+      GamePrint("give control")
+      ComponentSetValue2( player1_ControlsComponent, "enabled", true)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- teleport if there is a change
+    telport_distance = ModSettingGet("CouchCoOp.telport_distance")
+
+
+    if location_prev_initalized == false then
+      location_prev_initalized = true
+    elseif (math.abs(p1_location_x-p1_x_prev) > telport_distance) or (math.abs(p1_location_y-p1_y_prev) > telport_distance) then
+      EntitySetTransform( player2_obj , p1_location_x , p1_location_y )
+    elseif (math.abs(p2_location_x-p2_x_prev) > telport_distance) or (math.abs(p2_location_y-p2_y_prev) > telport_distance) then
+      EntitySetTransform( player1_obj , p2_location_x , p2_location_y )
+    end
+
+    --if(gameHook % 200 == 0)then
+    --  print("Went through inv script")
+    --end
+    ------------------------------------------------------------------------------------------------------------------------------
+
+    p1_x_prev = p1_location_x
+    p1_y_prev = p1_location_y
+    p2_x_prev = p2_location_x
+    p2_y_prev = p2_location_y
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- Keybind Teleport P1 -> P2
+
+    if get_binding_pressed("key_p1_tp_to_p2", "p1_tp_to_p2") then
+      EntitySetTransform( player1_obj , p2_location_x , p2_location_y )
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- Keybind Teleport P2 -> P1
+
+    if get_binding_pressed("key_p2_tp_to_p1", "p2_tp_to_p1") then
+      EntitySetTransform( player2_obj , p1_location_x , p1_location_y )
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 1
+
+    if get_binding_pressed("key_slot1", "slot1") then
+      quick_slot(1)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 2
+
+    if get_binding_pressed("key_slot2", "slot2") then
+      quick_slot(2)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 3
+
+    if get_binding_pressed("key_slot3", "slot3") then
+      quick_slot(3)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 4
+
+    if get_binding_pressed("key_slot4", "slot4") then
+      quick_slot(4)
+    end
+    
+        ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 5
+
+    if get_binding_pressed("key_slot5", "slot5") then
+      quick_slot(5)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 6
+
+    if get_binding_pressed("key_slot6", "slot6") then
+      quick_slot(6)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 7
+
+    if get_binding_pressed("key_slot7", "slot7") then
+      quick_slot(7)
+    end
+
+    ------------------------------------------------------------------------------------------------------------------------------
+    -- KEYBIND SLOT 8
+
+    if get_binding_pressed("key_slot8", "slot8") then
+      quick_slot(8)
+    end
+
+  ------------------------------------------------------------------------------------------------------------------------------
+  end -- END OF M-NEE HOTKEYS
+  ------------------------------------------------------------------------------------------------------------------------------
+  
+  if ModSettingGet("CouchCoOp.p1_color") ~= "disabled" then
+    if ModSettingGet("CouchCoOp.p1_color") ~= p1_color or ModSettingGet("CouchCoOp.p2_color") ~= p2_color then
+      change_robe(1)
+      p1_color = ModSettingGet("CouchCoOp.p1_color")
+      change_robe(2)
+      p2_color = ModSettingGet("CouchCoOp.p2_color")
+    end
+  end
+  
+
+
+------------------------------------------------------------------------------------------------------------------------------
+end -- END OF OnWorldPreUpdate()
+------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
 ------------------------------------------------------------------------------------------------------------------------------
 --//////////  ON WORLD SPAWN   /////////////////////////////////////////////////////////////////////////////////////////////--
 ------------------------------------------------------------------------------------------------------------------------------
-
 function OnPlayerSpawned(player_entity)
-  Initalized = true
+
   local p1_location_x,p1_location_y = EntityGetTransform( player_entity )
 
-  -- SPAWN PLAYER 3 & 3
-  if not get_player3_obj() then
-    EntityLoad( "data/entities/player3.xml" , p1_location_x + 130 , p1_location_y - 45 ) -- SPAWNS PLAYER 3
-  end
-
+  -- SPAWN PLAYER 2
   if not get_player2_obj() then
     EntityLoad( "data/entities/player2.xml" , p1_location_x + 110 , p1_location_y - 35 ) -- SPAWNS PLAYER 2
   end
 
+
+  ------------------------------------------------------------------------------------------------------------------------------
   -- CONTROLLER PLAYER STARTS WITH LASER-AIM (once)
-  local start_perk_mode = ModSettingGet("CouchCoOp.start_perk")
+  start_perk_mode = ModSettingGet("CouchCoOp.start_perk")
 
   if(start_perk_mode == true) then
     if(GameHasFlagRun("PERK_PICKED_" .. "LASER_AIM") ~= true)then
@@ -937,6 +961,42 @@ function OnPlayerSpawned(player_entity)
     end
   end
 
+------------------------------------------------------------------------------------------------------------------------------
+end -- END OF OnPlayerSpawned()
+------------------------------------------------------------------------------------------------------------------------------
 
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------
+--//////////  ON PLAYER DEATH   ////////////////////////////////////////////////////////////////////////////////////////////--
+------------------------------------------------------------------------------------------------------------------------------
+
+function OnPlayerDied(player1_obj)
+
+  GamePrint("Player 1 Died!")
+	local player_damage_model_id = EntityGetFirstComponent(get_player1_obj(), "DamageModelComponent")
+	
+	-- disable death
+	ComponentSetValue(player_damage_model_id, "wait_for_kill_flag_on_death", "1") 
+
+
+	--GameSetCameraFree(true)
+	--ComponentSetValue2(EntityGetComponent(GameGetWorldStateEntity(), "WorldStateComponent")[1],"open_fog_of_war_everywhere", true)
 end
+
+function OnPlayerDied(player2_obj)
+
+  GamePrint("Player 2 Died!")
+  local player_damage_model_id = EntityGetFirstComponent(get_player2_obj(), "DamageModelComponent")
+	
+	-- disable death
+	ComponentSetValue(player_damage_model_id, "wait_for_kill_flag_on_death", "1")
+
+	--GameSetCameraFree(true)
+	--ComponentSetValue2(EntityGetComponent(GameGetWorldStateEntity(), "WorldStateComponent")[1],"open_fog_of_war_everywhere", true)
+end
+
+
 
