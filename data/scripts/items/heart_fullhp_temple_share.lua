@@ -1,5 +1,6 @@
---dofile( "data/scripts/game_helpers.lua" )
-
+dofile( "data/scripts/game_helpers.lua" )
+dofile_once("data/scripts/lib/utilities.lua")
+dofile( "data/scripts/perks/perk.lua" )
 function item_pickup( entity_item, entity_who_picked, name )
 
 	local p1_ent = EntityGetWithTag( "player1_unit" )[1]
@@ -10,7 +11,7 @@ function item_pickup( entity_item, entity_who_picked, name )
 	local healing = 0
 	
 	local x, y = EntityGetTransform( entity_item )
-	regen_share = ModSettingGet("CouchCoOp.regen_share")
+	local regen_share = ModSettingGet("CouchCoOp.regen_share")
 
 
 	if(regen_share == true) then

@@ -1,5 +1,6 @@
---dofile( "data/scripts/game_helpers.lua" )
-
+dofile( "data/scripts/game_helpers.lua" )
+dofile_once("data/scripts/lib/utilities.lua")
+dofile( "data/scripts/perks/perk.lua" )
 function item_pickup( entity_item, entity_who_picked, name )
 	
   local p1_ent = EntityGetWithTag( "player1_unit" )[1]
@@ -10,7 +11,7 @@ function item_pickup( entity_item, entity_who_picked, name )
 	
 	local x, y = EntityGetTransform( entity_item )
 
-	local damagemodels = EntityGetComponent( p1_ent, "DamageModelComponent" )
+	local damagemodels = EntityGetComponentIncludingDisabled( p1_ent, "DamageModelComponent" )
 	if( damagemodels ~= nil ) then
 		for i,damagemodel in ipairs(damagemodels) do
 			max_hp = tonumber( ComponentGetValue( damagemodel, "max_hp" ) )
@@ -22,7 +23,7 @@ function item_pickup( entity_item, entity_who_picked, name )
 		end
 	end
 
-  local damagemodels = EntityGetComponent( p2_ent, "DamageModelComponent" )
+  local damagemodels = EntityGetComponentIncludingDisabled( p2_ent, "DamageModelComponent" )
 	if( damagemodels ~= nil ) then
 		for i,damagemodel in ipairs(damagemodels) do
 			max_hp = tonumber( ComponentGetValue( damagemodel, "max_hp" ) )

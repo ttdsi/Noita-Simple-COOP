@@ -1,17 +1,36 @@
-[FEATURES]
-- Revive feature [10]
-- Teleport Distance Setting [5]
-- Transfer Money without picking up gold [7]
-- Quick Slot through M-Nee [3]
-- Different Robes on Controller player [9]
-- UI Improvements [2]
-- 
+```
+[Bugs]
 
 
+--inventory mouse click p2
+--PLACE P2's Mouse at aim vector to display where to throw flask
+--On Polymorph , player might teleport to temple and trigger respawn duplicating the character
+-- On respawn the ui all fucked up
+--camera buttons dont work
 
 
-[BUG FIXES]
-- Save Controller Player [2]
-- Polymorph fix [1]
-- Allow the last player to continue without a Teammate [5]
+----[PREVIOUS TODO BEFORE REMAKE]
+- UI Improvements [2] ------ crazy
 - Perk Share works on unstackable perks (ex. Projectile Repulsion Field) [4]
+
+----[FEATURES TBD]
+--take money from player 1 when p2 spawns
+- Transfer Money without picking up gold
+--Get P2 to react to all random wand logic and onplayer spawn calls
+- Different Robes
+
+
+
+
+---[Legendary]
+--create a COOP Gamemode on the main menu
+
+
+-------[Notes]
+--Seems like theres a script from noita that forces gui to be in default X,Y Only when player1 respawns. Hunt it down!!
+
+---[Fudamental]
+3 players the first 2 rely on p3 -- bad
+fix by removing deligations the p3 gives to 1 and 2
+MOD IS NOT COMPATA WITH ALL THAT DATA FILE USAGE
+```

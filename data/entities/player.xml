@@ -4,17 +4,10 @@
   
   <Base file="data/entities/player_base.xml" include_children="1" /> 
 
-  <!--
-  <Entity name="inventory_quick">
-      <Entity><Base file="data/entities/items/starting_wand.xml" /></Entity> 
-      <Entity><Base file="data/entities/items/starting_bomb_wand.xml" /></Entity>
-      <Entity><Base file="data/entities/items/pickup/potion_aggressive.xml" /></Entity>
-  </Entity>
-  -->
 
   <Entity
       name="inventory_quick"
-      tags="player1_inventory">
+      tags="player_inventory">
       <Entity><Base file="data/entities/items/starting_wand_rng.xml" /></Entity>
       <Entity><Base file="data/entities/items/starting_bomb_wand_rng.xml" /></Entity>
       <Entity><Base file="data/entities/items/pickup/potion_starting.xml" /></Entity>
@@ -22,7 +15,7 @@
 
   <Entity
     name="inventory_full"
-    tags="player1_inventory_full"/>
+    tags="player_inventory_full"/>
 
 
 </Entity>
