@@ -1,13 +1,13 @@
 dofile("data/scripts/lib/mod_settings.lua")
 
 -- Use ModSettingGet() in the game to query settings.
-local mod_id = "CouchCoOp"
+local mod_id = "SimpleCoop"
 mod_settings_version = 1
 mod_settings = 
 {
   {
-    category_id = "CouchCoOp_settings",
-    ui_name = "Couch Co - Op Settings",
+    category_id = "SimpleCoop_settings",
+    ui_name = "Simple Co - Op Settings",
     ui_description = "Various Settings",
     settings = 
     {

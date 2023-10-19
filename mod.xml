@@ -1,6 +1,8 @@
 <Mod
-  name="Couch Co-Op"
-  description="Adds two player couch co-op! One player uses the mouse and keyboard, and the other player uses a controller. Requires Mnee to rebind keys!"
-  request_no_api_restrictions="0"
+  name="SimpleCoop"
+  description="Adds two player couch co-op! 
+  One player uses the mouse and keyboard, and the other player uses a controller. 
+  Requires Mnee to rebind keys!   WARNING: MAKE SURE TO UNBIND ALL VANILLA GAMEPLAY BINDINGS CONTROLLER AND KEYBOARD"
+  request_no_api_restrictions="1"
 > 
 </Mod>

@@ -2,6 +2,14 @@
 [Bugs]
 
 
+[[[[[[[[[[[[[[PLAYER 3 NOT SPAWNING]]]]]]]]]]]]]]
+
+
+
+
+
+
+
 --inventory mouse click p2
 --PLACE P2's Mouse at aim vector to display where to throw flask
 --On Polymorph , player might teleport to temple and trigger respawn duplicating the character

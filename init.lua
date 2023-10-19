@@ -1,3 +1,16 @@
+local player_spawn_funcs = {}
+
+DontUse = function ()
+  print("[USED]")
+end
+
+local function Spawned2(p)
+  print("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[---------------------------------------ITERRATE P2 CALLED:"..p)
+ for k,v in ipairs(player_spawn_funcs) do
+      v(p)
+  end
+end
+
 
 dofile( "data/scripts/game_helpers.lua" )
 dofile_once("data/scripts/lib/utilities.lua")
@@ -22,7 +35,7 @@ end
 -- APPLIES M-NEE BINDS
 -- THIS IS NECESSARY DUE TO NO ADDITIONAL INPUT MAPPING FROM NOITA
 if ModIsEnabled("mnee") then
-	ModLuaFileAppend("mods/mnee/bindings.lua", "mods/CouchCoOp/mnee.lua")
+	ModLuaFileAppend("mods/mnee/bindings.lua", "mods/SimpleCoop/mnee.lua")
 	dofile_once("mods/mnee/lib.lua")
 else
   while true do
@@ -40,6 +53,7 @@ local p1_x_prev = 0.0
 local p1_y_prev = 0.0
 local p2_x_prev = 0.0
 local p2_y_prev = 0.0
+
 local robe_red = { name =  "ARGB248_64_50", folder = "RGB248_64_50", cape_color = 0xFF3240f8, cape_color_edge = 0xFF1927df,}
 local robe_purple = { name =  "ARGB168_131_216", folder = "RGB168_131_216", cape_color = 0xFFd883a8, cape_color_edge = 0xFFbf6a8f,}
 local robe_green = { name =  "ARGB53_247_132", folder = "RGB53_247_132", cape_color = 0xFF84f735, cape_color_edge = 0xFF6bde1c,}
@@ -47,9 +61,87 @@ local robe_lightblue = { name =  "ARGB50_164_162", folder = "RGB50_164_162", cap
 local robe_blue = { name =  "ARGB50_116_205", folder = "RGB50_116_205", cape_color = 0xFFcd7432, cape_color_edge = 0xFFb45b19,}
 local robe_yellow = { name =  "ARGB244_246_90", folder = "RGB244_246_90", cape_color = 0xFF5af6f4, cape_color_edge = 0xFF41dddb,}
 
-local p1_color = ModSettingGet("CouchCoOp.p1_color")
-local p2_color = ModSettingGet("CouchCoOp.p2_color")
+local p1_color = ModSettingGet("SimpleCoop.p1_color")
+local p2_color = ModSettingGet("SimpleCoop.p2_color")
 
+------------------------------------------------------------------------------------------------------------------------------
+-- Function: Translate Color
+
+function get_color_list(color)
+  if color == "green" then
+    return robe_green
+  elseif color == "red" then
+    return robe_red
+  elseif color == "yellow" then
+    return robe_yellow
+  elseif color == "purple" then
+    return robe_purple
+  elseif color == "blue" then
+    return robe_blue
+  elseif color == "lightblue" then
+    return robe_lightblue
+  else
+    return robe_purple
+  end
+end
+
+------------------------------------------------------------------------------------------------------------------------------
+-- Function: Set Skin
+
+function change_robe(player)
+
+  if player == 2 then
+    player_entity = get_player2_obj()
+    loadout_choice = get_color_list(ModSettingGet("SimpleCoop.p2_color"))
+  else 
+    player_entity = get_player1_obj()
+    loadout_choice = get_color_list(ModSettingGet("SimpleCoop.p1_color"))
+  end 
+
+  local cape = nil
+  local player_arm = nil
+
+  local loadout_cape_color = loadout_choice.cape_color
+  local loadout_cape_color_edge = loadout_choice.cape_color_edge
+
+  -- find the quick inventory, player cape and arm
+  local player_child_entities = EntityGetAllChildren( player_entity )
+  if ( player_child_entities ~= nil ) then
+    for i,child_entity in ipairs( player_child_entities ) do
+      local child_entity_name = EntityGetName( child_entity )
+      
+      if ( child_entity_name == "cape" ) then
+        cape = child_entity
+      end
+      
+      if ( child_entity_name == "arm_r" ) then
+        player_arm = child_entity
+      end
+    end
+  end
+
+  -- set player sprite (since we change only one value, ComponentSetValue is fine)
+  local player_sprite_component = EntityGetFirstComponentIncludingDisabled( player_entity, "SpriteComponent" )
+  local player_sprite_file = "mods/SimpleCoop/data/skins/".. loadout_choice.folder .."/player.xml"
+  ComponentSetValue( player_sprite_component, "image_file", player_sprite_file )
+
+  -- set player arm sprite
+  local player_arm_sprite_component = EntityGetFirstComponentIncludingDisabled( player_arm, "SpriteComponent" )
+  local player_arm_sprite_file = "mods/SimpleCoop/data/skins/".. loadout_choice.folder .."/player_arm.xml"
+  ComponentSetValue( player_arm_sprite_component, "image_file", player_arm_sprite_file )
+
+  -- set player cape colour (since we're changing multiple variables, we'll use the edit_component() utility)
+  edit_component( cape, "VerletPhysicsComponent", function(comp,vars) 
+    vars.cloth_color = loadout_cape_color
+    vars.cloth_color_edge = loadout_cape_color_edge
+  end)
+
+  -- set player ragdoll
+  local player_ragdoll_component = EntityGetFirstComponentIncludingDisabled( player_entity, "DamageModelComponent" )
+  local player_ragdoll_file = "mods/SimpleCoop/data/skins/".. loadout_choice.folder .."/ragdoll/filenames.txt"
+  ComponentSetValue( player_ragdoll_component, "ragdoll_filenames_file", player_ragdoll_file )
+
+end
 
 
 
@@ -58,13 +150,13 @@ local p2_color = ModSettingGet("CouchCoOp.p2_color")
 -- Function: GET PLAYER ENTITY
 
 function get_player1_obj()
-    return EntityGetWithTag( "player1_unit" )[1]
+ return EntityGetWithTag("player1_unit")[1]
 end
 function get_player2_obj()
-  return EntityGetWithTag( "player2_unit" )[1]
+  return EntityGetWithTag("player2_unit")[1]
 end
 function get_player3_obj()
-  return EntityGetWithTag( "player3_unit" )[1]
+  return EntityGetWithTag("player3_unit")[1]
 end
 
 ------------------------------------------------------------------------------------------------------------------------------
@@ -245,86 +337,6 @@ function quick_slot(player,desired_slot)
 
   scroll_inventory(player,change_amount)
 end
-
-------------------------------------------------------------------------------------------------------------------------------
--- Function: Translate Color
-
-function get_color_list(color)
-  if color == "green" then
-    return robe_green
-  elseif color == "red" then
-    return robe_red
-  elseif color == "yellow" then
-    return robe_yellow
-  elseif color == "purple" then
-    return robe_purple
-  elseif color == "blue" then
-    return robe_blue
-  elseif color == "lightblue" then
-    return robe_lightblue
-  else
-    return robe_purple
-  end
-end
-
-------------------------------------------------------------------------------------------------------------------------------
--- Function: Set Skin
-
-function change_robe(player)
-
-  if player == 2 then
-    player_entity = get_player2_obj()
-    loadout_choice = get_color_list(ModSettingGet("CouchCoOp.p2_color"))
-  else 
-    player_entity = get_player1_obj()
-    loadout_choice = get_color_list(ModSettingGet("CouchCoOp.p1_color"))
-  end 
-
-  local cape = nil
-  local player_arm = nil
-
-  local loadout_cape_color = loadout_choice.cape_color
-  local loadout_cape_color_edge = loadout_choice.cape_color_edge
-
-  -- find the quick inventory, player cape and arm
-  local player_child_entities = EntityGetAllChildren( player_entity )
-  if ( player_child_entities ~= nil ) then
-    for i,child_entity in ipairs( player_child_entities ) do
-      local child_entity_name = EntityGetName( child_entity )
-      
-      if ( child_entity_name == "cape" ) then
-        cape = child_entity
-      end
-      
-      if ( child_entity_name == "arm_r" ) then
-        player_arm = child_entity
-      end
-    end
-  end
-
-  -- set player sprite (since we change only one value, ComponentSetValue is fine)
-  local player_sprite_component = EntityGetFirstComponentIncludingDisabled( player_entity, "SpriteComponent" )
-  local player_sprite_file = "mods/CouchCoOp/data/skins/".. loadout_choice.folder .."/player.xml"
-  ComponentSetValue( player_sprite_component, "image_file", player_sprite_file )
-
-  -- set player arm sprite
-  local player_arm_sprite_component = EntityGetFirstComponentIncludingDisabled( player_arm, "SpriteComponent" )
-  local player_arm_sprite_file = "mods/CouchCoOp/data/skins/".. loadout_choice.folder .."/player_arm.xml"
-  ComponentSetValue( player_arm_sprite_component, "image_file", player_arm_sprite_file )
-
-  -- set player cape colour (since we're changing multiple variables, we'll use the edit_component() utility)
-  edit_component( cape, "VerletPhysicsComponent", function(comp,vars) 
-    vars.cloth_color = loadout_cape_color
-    vars.cloth_color_edge = loadout_cape_color_edge
-  end)
-
-  -- set player ragdoll
-  local player_ragdoll_component = EntityGetFirstComponentIncludingDisabled( player_entity, "DamageModelComponent" )
-  local player_ragdoll_file = "mods/CouchCoOp/data/skins/".. loadout_choice.folder .."/ragdoll/filenames.txt"
-  ComponentSetValue( player_ragdoll_component, "ragdoll_filenames_file", player_ragdoll_file )
-
-end
-
 
 
 
@@ -745,17 +757,6 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 ---------Universal Keybinds
 function UniversalControl()
   local player3_obj = get_player3_obj() -- Player 2 ID (Controller)
@@ -765,22 +766,22 @@ function UniversalControl()
 
   end
   if get_binding_pressed("key_cam0", "cam0") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "0")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "0", false)
-
+    ModSettingSet("SimpleCoop.camera_mode", "0")
+    ModSettingSetNextValue("SimpleCoop.camera_mode", "0", false)
+    Spawned2(get_player2_obj())
   end
   if get_binding_pressed("key_cam1", "cam1") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "1")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "1", false)
+    ModSettingSet("SimpleCoop.camera_mode", "1")
+    ModSettingSetNextValue("SimpleCoop.camera_mode", "1", false)
 
   end
   if get_binding_pressed("key_cam2", "cam2") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "2")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "2", false)
+    ModSettingSet("SimpleCoop.camera_mode", "2")
+    ModSettingSetNextValue("SimpleCoop.camera_mode", "2", false)
   end
   if get_binding_pressed("key_cam3", "cam3") and ModIsEnabled("mnee") then
-    ModSettingSet("CouchCoOp.camera_mode", "3")
-    ModSettingSetNextValue("CouchCoOp.camera_mode", "3", false)
+    ModSettingSet("SimpleCoop.camera_mode", "3")
+    ModSettingSetNextValue("SimpleCoop.camera_mode", "3", false)
   end
 
 
@@ -839,25 +840,25 @@ end
 -- FILE INITIALIZATION: Zoom Level    Check out: (HD Noita mod)
 ------------------------------------------------------------------------------------------------------------------------------
 
-if ModSettingGet("CouchCoOp.zoom_level") == "120%" then
-  ModMagicNumbersFileAdd("mods/CouchCoOp/data/files/1_2_magic_numbers.xml" )
-  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_2_post_final.frag"))
-  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_2_post_final.vert"))  
+if ModSettingGet("SimpleCoop.zoom_level") == "120%" then
+  ModMagicNumbersFileAdd("mods/SimpleCoop/data/files/1_2_magic_numbers.xml" )
+  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_2_post_final.frag"))
+  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_2_post_final.vert"))  
 
-elseif ModSettingGet("CouchCoOp.zoom_level") == "130%" then
-  ModMagicNumbersFileAdd("mods/CouchCoOp/data/files/1_3_magic_numbers.xml" )
-  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_3_post_final.frag"))
-  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_3_post_final.vert"))  
+elseif ModSettingGet("SimpleCoop.zoom_level") == "130%" then
+  ModMagicNumbersFileAdd("mods/SimpleCoop/data/files/1_3_magic_numbers.xml" )
+  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_3_post_final.frag"))
+  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_3_post_final.vert"))  
 
-elseif ModSettingGet("CouchCoOp.zoom_level") == "140%" then
-  ModMagicNumbersFileAdd("mods/CouchCoOp/data/files/1_4_magic_numbers.xml" )
-  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_4_post_final.frag"))
-  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_4_post_final.vert"))  
+elseif ModSettingGet("SimpleCoop.zoom_level") == "140%" then
+  ModMagicNumbersFileAdd("mods/SimpleCoop/data/files/1_4_magic_numbers.xml" )
+  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_4_post_final.frag"))
+  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_4_post_final.vert"))  
 
-elseif ModSettingGet("CouchCoOp.zoom_level") == "150%" then
-  ModMagicNumbersFileAdd("mods/CouchCoOp/data/files/1_5_magic_numbers.xml" )
-  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_5_post_final.frag"))
-  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/CouchCoOp/data/shaders/1_5_post_final.vert"))  
+elseif ModSettingGet("SimpleCoop.zoom_level") == "150%" then
+  ModMagicNumbersFileAdd("mods/SimpleCoop/data/files/1_5_magic_numbers.xml" )
+  ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_5_post_final.frag"))
+  ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_5_post_final.vert"))  
 
 else -- Assume we are on Normal
   ModMagicNumbersFileAdd("mods/hd_noita/data/files/1_0_magic_numbers.xml")
@@ -891,17 +892,23 @@ function OnWorldPreUpdate()
 
 
 
-  local telport_distance = ModSettingGet("CouchCoOp.telport_distance")
+  local telport_distance = ModSettingGet("SimpleCoop.telport_distance")
 
 
 
 
 
 
-  local camera_mode = ModSettingGet("CouchCoOp.camera_mode")
+  local camera_mode = ModSettingGet("SimpleCoop.camera_mode")
 
 
   UniversalControl()
+  if IsPlayerDead(get_player3_obj()) == true then
+    ---print("PLAYER3DEAD----------------------------------------------------------------")
+    GamePrint("PLAYER3DEAD----------------------------------------------------------------")
+    return
+  end
+
   
   if IsPlayerDead(get_player1_obj()) == false then
     setControlsP1()
@@ -915,6 +922,8 @@ function OnWorldPreUpdate()
     p2_y_prev = p2_location_y
   
   end
+
+
 
   if IsPlayerDead(get_player1_obj()) == false and IsPlayerDead(get_player2_obj()) == true then
     camera_mode = "1"
@@ -951,34 +960,64 @@ end
 --//////////  ON WORLD SPAWN   /////////////////////////////////////////////////////////////////////////////////////////////--
 ------------------------------------------------------------------------------------------------------------------------------
 
-function OnPlayerSpawned(player_entity)
-  Initalized = true
+
+
+
+
+
+
+ function OnPlayerSpawned(player_entity)
+  print("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[---------------------------------------InitalSpawn:"..player_entity)
+
+
+	local init_check_flag = "Coop_Spawn_init"
+	if GameHasFlagRun( init_check_flag ) then
+		return
+	end
+	GameAddFlagRun( init_check_flag )
+
   local p1_location_x,p1_location_y = EntityGetTransform( player_entity )
 
   -- SPAWN PLAYER 3 & 3
   if not get_player3_obj() then
+    print("{{{{{{{LOAD 3}}}}}}}")
     EntityLoad( "data/entities/player3.xml" , p1_location_x + 130 , p1_location_y - 45 ) -- SPAWNS PLAYER 3
   end
 
-  if not get_player2_obj() and EntityHasTag(get_player1_obj(),"Inti") == false then
-    EntityLoad( "data/entities/player2.xml" , p1_location_x + 110 , p1_location_y - 35 ) -- SPAWNS PLAYER 2
-    EntityAddTag(get_player1_obj(),"Inti")
+  if not get_player2_obj() then
+    print("{{{{{{{LOAD 2}}}}}}}")
+    EntityLoad( "data/entities/player2.xml" , p1_location_x + 110 , p1_location_y - 35 )
     local p2_location_x,p2_location_y = EntityGetTransform( player_entity )
     local startperk = perk_spawn( p2_location_x , p2_location_y , "LASER_AIM" )
-    -- To pick up the perk instantly, you can continue:
     perk_pickup(startperk, get_player2_obj(), "LASER_AIM", false, false)
-
+    OnPlayerSpawned(get_player2_obj())
   end
 
-      EntityLoad( "data/entities/items/pickup/egg_monster.xml", 281, -84 )
-      -- Apply Skins only at world start
-      if ModSettingGet("CouchCoOp.p1_color") ~= "disabled" then
-        change_robe(1)
-        change_robe(2)
-      end
+ EntityLoad( "data/entities/items/pickup/egg_monster.xml", 281, -84 )
+end
+--[[ -- Broken mod support. PLAYER TO IS PASSED THROUGH PLAYER ON SPAWN 
+function OnModPreInit()
+  dofile("data/DisableImpure.lua")
+    local mods = ModGetActiveModIDs()
+    for k, v in ipairs(mods) do
+        OnPlayerSpawned = nil
+        if v ~= "mnee" and v ~= "SimpleCoop" then
+        pcall(dofile("mods/" .. v .. "/init.lua"))
+          if OnPlayerSpawned ~= nil then
+            print("---------------FOUND ONE:"..v)
+          table.insert(player_spawn_funcs, OnPlayerSpawned)
+          end
+        end
+        OnPlayerSpawned = nil
+    end
+    dofile("data/EnableImpure.lua")
+end
+]]
 
+function OnModInit()
 
-
+ -- function OnPlayerSpawned(p)
+ --   Spawned(p)
+ -- end
 
 end
-
