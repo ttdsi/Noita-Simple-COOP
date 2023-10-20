@@ -1,17 +1,3 @@
-local player_spawn_funcs = {}
-
-DontUse = function ()
-  print("[USED]")
-end
-
-local function Spawned2(p)
-  print("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[---------------------------------------ITERRATE P2 CALLED:"..p)
- for k,v in ipairs(player_spawn_funcs) do
-      v(p)
-  end
-end
-
-
 dofile( "data/scripts/game_helpers.lua" )
 dofile_once("data/scripts/lib/utilities.lua")
 dofile_once( "data/scripts/perks/perk_list.lua")
@@ -48,7 +34,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 
 
-local location_prev_initalized = false
+local init_check_flag = "Coop_Spawn_init"
 local p1_x_prev = 0.0
 local p1_y_prev = 0.0
 local p2_x_prev = 0.0
@@ -142,10 +128,6 @@ function change_robe(player)
   ComponentSetValue( player_ragdoll_component, "ragdoll_filenames_file", player_ragdoll_file )
 
 end
-
-
-
-
 ------------------------------------------------------------------------------------------------------------------------------
 -- Function: GET PLAYER ENTITY
 
@@ -299,7 +281,7 @@ function get_active_item(player)
   end
 end
 
-------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
 -- Function: GENERATE HOTBAR ARRAY (0 == No Item, 1 == Item)
 
 function quick_slot(player,desired_slot)
@@ -337,8 +319,6 @@ function quick_slot(player,desired_slot)
 
   scroll_inventory(player,change_amount)
 end
-
-
 
 ------------------------------------------------------------------------------------------------------------------------------
 ----------PLAYER1 MEMORY
@@ -763,17 +743,14 @@ function UniversalControl()
   local player3_ControlsComponent = EntityGetFirstComponentIncludingDisabled( player3_obj, "ControlsComponent" )
   if player3_ControlsComponent == nil then
     EntityAddComponent( player3_obj, "ControlsComponent")
-
   end
   if get_binding_pressed("key_cam0", "cam0") and ModIsEnabled("mnee") then
     ModSettingSet("SimpleCoop.camera_mode", "0")
     ModSettingSetNextValue("SimpleCoop.camera_mode", "0", false)
-    Spawned2(get_player2_obj())
   end
   if get_binding_pressed("key_cam1", "cam1") and ModIsEnabled("mnee") then
     ModSettingSet("SimpleCoop.camera_mode", "1")
     ModSettingSetNextValue("SimpleCoop.camera_mode", "1", false)
-
   end
   if get_binding_pressed("key_cam2", "cam2") and ModIsEnabled("mnee") then
     ModSettingSet("SimpleCoop.camera_mode", "2")
@@ -800,9 +777,6 @@ function IsPlayerDead(PlayerTag)
 
 end
 
-
-
-
 function HideInv()
   local player2_obj = get_player2_obj() -- Player 2 ID (Controller)
   local player1_obj = get_player1_obj() -- Player 1 ID (PC)
@@ -824,15 +798,6 @@ function HideInv()
     EntitySetComponentIsEnabled( player1_obj, player1_InventoryGuiComponent, true )
    end
 end
-
-
-
-
-
-
-
-
-
 
 
 
@@ -868,8 +833,9 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 --//////////  ON FRAME UPDATE   /////////////////////////////////////////////////////////////////////////////////////////////--
 ------------------------------------------------------------------------------------------------------------------------------
-local Initalized = false
+
 function OnWorldPreUpdate()
+
 	wake_up_waiting_threads(1)
 
   local player3_obj = get_player3_obj() -- Player 3 ID (PC)
@@ -893,12 +859,6 @@ function OnWorldPreUpdate()
 
 
   local telport_distance = ModSettingGet("SimpleCoop.telport_distance")
-
-
-
-
-
-
   local camera_mode = ModSettingGet("SimpleCoop.camera_mode")
 
 
@@ -908,14 +868,11 @@ function OnWorldPreUpdate()
     GamePrint("PLAYER3DEAD----------------------------------------------------------------")
     return
   end
-
-  
   if IsPlayerDead(get_player1_obj()) == false then
     setControlsP1()
     p1_x_prev = p1_location_x
     p1_y_prev = p1_location_y
   end
-
   if IsPlayerDead(get_player2_obj()) == false then
     setControlsP2()
     p2_x_prev = p2_location_x
@@ -926,33 +883,18 @@ function OnWorldPreUpdate()
 
 
   if IsPlayerDead(get_player1_obj()) == false and IsPlayerDead(get_player2_obj()) == true then
-    camera_mode = "1"
+    GameSetCameraPos(p1_location_x, p1_location_y )
     ComponentSetValue2(player3_PlatformShooterPlayerComponent, "mDesiredCameraPos", p1_location_x, p1_location_y ) 
   elseif IsPlayerDead(get_player1_obj()) == true and IsPlayerDead(get_player2_obj()) == false then
-    camera_mode = "2"
+    GameSetCameraPos(p2_location_x, p2_location_y )
   elseif IsPlayerDead(get_player1_obj()) == false and IsPlayerDead(get_player2_obj()) == false then
-    camera_mode = "0"
-    HideInv()
-  elseif IsPlayerDead(get_player1_obj()) == true and IsPlayerDead(get_player2_obj()) == true and Initalized == true then
-    camera_mode = "4"
-    GameTriggerGameOver()
-  end
-
-
-
-  if (camera_mode == "0") then
     GameSetCameraPos(( p1_location_x+p2_location_x)/2.0, (p1_location_y+p2_location_y)/2.0 )
     ComponentSetValue2(player3_PlatformShooterPlayerComponent, "mDesiredCameraPos", ( p1_location_x+p2_location_x)/2.0, (p1_location_y+p2_location_y)/2.0 )
-  elseif (camera_mode == "1") then
-    GameSetCameraPos(p1_location_x, p1_location_y )
-  elseif (camera_mode == "2") then
-
-    GameSetCameraPos(p2_location_x, p2_location_y )
-  else
+    HideInv()
+  elseif IsPlayerDead(get_player1_obj()) == true and IsPlayerDead(get_player2_obj()) == true and GameHasFlagRun( init_check_flag ) == true then
     GameSetCameraPos(0, 0)
+    GameTriggerGameOver()
   end
-
---GamePrint(camera_mode)
 
 end
 
@@ -960,22 +902,12 @@ end
 --//////////  ON WORLD SPAWN   /////////////////////////////////////////////////////////////////////////////////////////////--
 ------------------------------------------------------------------------------------------------------------------------------
 
-
-
-
-
-
-
  function OnPlayerSpawned(player_entity)
-  print("[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[---------------------------------------InitalSpawn:"..player_entity)
 
-
-	local init_check_flag = "Coop_Spawn_init"
 	if GameHasFlagRun( init_check_flag ) then
 		return
 	end
 	GameAddFlagRun( init_check_flag )
-
   local p1_location_x,p1_location_y = EntityGetTransform( player_entity )
 
   -- SPAWN PLAYER 3 & 3
@@ -990,34 +922,10 @@ end
     local p2_location_x,p2_location_y = EntityGetTransform( player_entity )
     local startperk = perk_spawn( p2_location_x , p2_location_y , "LASER_AIM" )
     perk_pickup(startperk, get_player2_obj(), "LASER_AIM", false, false)
-    OnPlayerSpawned(get_player2_obj())
+    OnPlayer2Spawned(get_player2_obj())
   end
-
+  change_robe(1)
+  change_robe(2)
  EntityLoad( "data/entities/items/pickup/egg_monster.xml", 281, -84 )
 end
---[[ -- Broken mod support. PLAYER TO IS PASSED THROUGH PLAYER ON SPAWN 
-function OnModPreInit()
-  dofile("data/DisableImpure.lua")
-    local mods = ModGetActiveModIDs()
-    for k, v in ipairs(mods) do
-        OnPlayerSpawned = nil
-        if v ~= "mnee" and v ~= "SimpleCoop" then
-        pcall(dofile("mods/" .. v .. "/init.lua"))
-          if OnPlayerSpawned ~= nil then
-            print("---------------FOUND ONE:"..v)
-          table.insert(player_spawn_funcs, OnPlayerSpawned)
-          end
-        end
-        OnPlayerSpawned = nil
-    end
-    dofile("data/EnableImpure.lua")
-end
-]]
 
-function OnModInit()
-
- -- function OnPlayerSpawned(p)
- --   Spawned(p)
- -- end
-
-end
