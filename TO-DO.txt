@@ -1,13 +1,12 @@
 ```
 [Bugs]
---Player "Share scripts" assert failures
--- Fix Mnee.lua to be default keybinds
+
 -- Map quickslots P1
-
+-- Fix Mnee.lua to be default keybinds
+-- inventory mouse click p2
+-- teleport logic
 -- On respawn the ui all fucked up
---inventory mouse click p2
-
-
+-- Player "Share scripts" assert failures
 
 [QOL]
 --PLACE P2's Mouse at aim vector to display where to throw flask
@@ -24,6 +23,6 @@ Optamize data usage
 
 [Notes]
 --Seems like theres a script from noita that forces gui to be in default X,Y Only when player1 respawns. Hunt it down!!
-
+--Warn Clients to be on beta branch
 
 ```

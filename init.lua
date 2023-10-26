@@ -32,8 +32,6 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 -- VARIABLES
 ------------------------------------------------------------------------------------------------------------------------------
-
-
 local init_check_flag = "Coop_Spawn_init"
 local p1_x_prev = 0.0
 local p1_y_prev = 0.0
@@ -78,10 +76,10 @@ function change_robe(player)
 
   if player == 2 then
     player_entity = get_player2_obj()
-    loadout_choice = get_color_list(ModSettingGet("SimpleCoop.p2_color"))
+    loadout_choice = get_color_list(ModSettingGet("CouchCoOp.p2_color"))
   else 
     player_entity = get_player1_obj()
-    loadout_choice = get_color_list(ModSettingGet("SimpleCoop.p1_color"))
+    loadout_choice = get_color_list(ModSettingGet("CouchCoOp.p1_color"))
   end 
 
   local cape = nil
@@ -107,13 +105,13 @@ function change_robe(player)
   end
 
   -- set player sprite (since we change only one value, ComponentSetValue is fine)
-  local player_sprite_component = EntityGetFirstComponentIncludingDisabled( player_entity, "SpriteComponent" )
-  local player_sprite_file = "mods/SimpleCoop/data/skins/".. loadout_choice.folder .."/player.xml"
+  local player_sprite_component = EntityGetFirstComponent( player_entity, "SpriteComponent" )
+  local player_sprite_file = "mods/CouchCoOp/data/skins/".. loadout_choice.folder .."/player.xml"
   ComponentSetValue( player_sprite_component, "image_file", player_sprite_file )
 
   -- set player arm sprite
-  local player_arm_sprite_component = EntityGetFirstComponentIncludingDisabled( player_arm, "SpriteComponent" )
-  local player_arm_sprite_file = "mods/SimpleCoop/data/skins/".. loadout_choice.folder .."/player_arm.xml"
+  local player_arm_sprite_component = EntityGetFirstComponent( player_arm, "SpriteComponent" )
+  local player_arm_sprite_file = "mods/CouchCoOp/data/skins/".. loadout_choice.folder .."/player_arm.xml"
   ComponentSetValue( player_arm_sprite_component, "image_file", player_arm_sprite_file )
 
   -- set player cape colour (since we're changing multiple variables, we'll use the edit_component() utility)
@@ -123,8 +121,8 @@ function change_robe(player)
   end)
 
   -- set player ragdoll
-  local player_ragdoll_component = EntityGetFirstComponentIncludingDisabled( player_entity, "DamageModelComponent" )
-  local player_ragdoll_file = "mods/SimpleCoop/data/skins/".. loadout_choice.folder .."/ragdoll/filenames.txt"
+  local player_ragdoll_component = EntityGetFirstComponent( player_entity, "DamageModelComponent" )
+  local player_ragdoll_file = "mods/CouchCoOp/data/skins/".. loadout_choice.folder .."/ragdoll/filenames.txt"
   ComponentSetValue( player_ragdoll_component, "ragdoll_filenames_file", player_ragdoll_file )
 
 end
@@ -231,8 +229,6 @@ end
 
 ------------------------------------------------------------------------------------------------------------------------------
 -- Function: GET INVENTORY + ACTIVE ITEM
-
-
 ---Returns a table of entity ids currently occupying the inventory, their index is their inventory position
 ---return table inventory In the form: { [0] = nil, [1] = 307, } etc
 ---return number active_item
@@ -797,6 +793,12 @@ function HideInv()
    else
     EntitySetComponentIsEnabled( player1_obj, player1_InventoryGuiComponent, true )
    end
+
+   if ComponentGetIsEnabled(player2_InventoryGuiComponent) == false and ComponentGetIsEnabled(player2_InventoryGuiComponent) == false then
+    EntitySetComponentIsEnabled( player1_obj, player1_InventoryGuiComponent, true )
+    EntitySetComponentIsEnabled( player2_obj, player2_InventoryGuiComponent, true )
+   end
+
 end
 
 
@@ -809,7 +811,6 @@ if ModSettingGet("SimpleCoop.zoom_level") == "120%" then
   ModMagicNumbersFileAdd("mods/SimpleCoop/data/files/1_2_magic_numbers.xml" )
   ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_2_post_final.frag"))
   ModTextFileSetContent("data/shaders/post_final.vert", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_2_post_final.vert"))  
-
 elseif ModSettingGet("SimpleCoop.zoom_level") == "130%" then
   ModMagicNumbersFileAdd("mods/SimpleCoop/data/files/1_3_magic_numbers.xml" )
   ModTextFileSetContent("data/shaders/post_final.frag", ModTextFileGetContent("mods/SimpleCoop/data/shaders/1_3_post_final.frag"))
@@ -894,6 +895,7 @@ function OnWorldPreUpdate()
   elseif IsPlayerDead(get_player1_obj()) == true and IsPlayerDead(get_player2_obj()) == true and GameHasFlagRun( init_check_flag ) == true then
     GameSetCameraPos(0, 0)
     GameTriggerGameOver()
+    print("GAMEOVER----------------------------------------------------------")
   end
 
 end
@@ -908,6 +910,7 @@ end
 		return
 	end
 	GameAddFlagRun( init_check_flag )
+
   local p1_location_x,p1_location_y = EntityGetTransform( player_entity )
 
   -- SPAWN PLAYER 3 & 3
@@ -924,8 +927,12 @@ end
     perk_pickup(startperk, get_player2_obj(), "LASER_AIM", false, false)
     OnPlayer2Spawned(get_player2_obj())
   end
-  change_robe(1)
-  change_robe(2)
+
+  if ModSettingGet("CouchCoOp.p1_color") ~= "disabled" then
+    change_robe(1)
+    change_robe(2)
+  end
+
  EntityLoad( "data/entities/items/pickup/egg_monster.xml", 281, -84 )
 end
 
